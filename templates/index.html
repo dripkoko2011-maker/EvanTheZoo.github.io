@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DoChat</title>
+    
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#2563eb">
+    <link rel="apple-touch-icon" href="/static/icon.png">
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #0f172a; display: flex; justify-content: center; align-items: center; height: 100vh; color: #f8fafc; }
+        
+        .chat-container { width: 95%; max-width: 750px; height: 95vh; background: #1e293b; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); display: flex; flex-direction: column; overflow: hidden; border: 1px solid #334155; }
+
+        .chat-header { background: #2563eb; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .chat-header h2 { font-size: 1.4rem; letter-spacing: 0.5px; }
+        .online-status { font-size: 0.85rem; background: rgba(0,0,0,0.2); padding: 5px 12px; border-radius: 20px; }
+
+        .name-area { padding: 12px 20px; background: #0f172a; border-bottom: 1px solid #334155; }
+        .name-area input { width: 100%; padding: 10px 14px; background: #0f172a; color: #94a3b8; border: 1px solid #475569; border-radius: 8px; outline: none; font-size: 0.9rem; }
+        .name-area input:not([readonly]) { background: #1e293b; color: white; border-color: #10b981; }
+
+        #chat { flex: 1; padding: 20px; overflow-y: auto; background: #0f172a; display: flex; flex-direction: column; gap: 16px; }
+        
+        .message-wrapper { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; max-width: 85%; }
+        
+        .msg-info { display: flex; gap: 8px; align-items: baseline; margin-left: 4px; }
+        .msg-name { color: #38bdf8; font-size: 0.85rem; font-weight: bold; }
+        .msg-time { color: #64748b; font-size: 0.75rem; }
+        
+        .msg-bubble { background: #1e293b; color: #e2e8f0; padding: 10px 14px; border-radius: 12px; border: 1px solid #334155; line-height: 1.5; font-size: 0.95rem; word-break: break-word; overflow-wrap: break-word; width: fit-content; }
+        .msg-bubble a { color: #60a5fa; text-decoration: underline; }
+
+        #chat p.system-msg { background: transparent; border: none; color: #10b981; text-align: center; width: 100%; font-size: 0.9rem; padding: 0; margin: 5px 0; }
+
+        .typing-indicator { height: 20px; background: #1e293b; padding: 0 20px; font-size: 0.8rem; color: #94a3b8; font-style: italic; display: flex; align-items: center; }
+
+        .emoji-panel { background: #1e293b; padding: 8px 20px; display: flex; gap: 10px; border-top: 1px solid #334155; overflow-x: auto; }
+        .emoji-btn { background: transparent; border: none; font-size: 1.2rem; cursor: pointer; transition: transform 0.2s; }
+        .emoji-btn:hover { transform: scale(1.2); }
+
+        .input-area { display: flex; padding: 15px 20px; background: #1e293b; gap: 12px; border-top: 1px solid #334155; }
+        /* MEMASTIKAN INPUT BISA DIKLIK DAN DIKETIK */
+        .input-area input { flex: 1; padding: 14px; background: #0f172a; color: white; border: 1px solid #475569; border-radius: 8px; outline: none; font-size: 1rem; position: relative; z-index: 10; }
+        .input-area input:focus { border-color: #2563eb; }
+        .input-area button { background: #2563eb; color: white; border: none; padding: 0 25px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .input-area button:hover { background: #1d4ed8; }
+        
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="chat-container">
+        <div class="chat-header">
+            <h2>💬 DoChat</h2>
+            <div class="online-status">🟢 <span id="online-count">0</span> Online</div>
+        </div>
+        
+        <div class="name-area">
+            <input id="name" placeholder="Nama Kamu..." readonly>
+        </div>
+
+        <div id="chat">
+            {% for msg in messages %}
+                {% if msg[0] == 'SISTEM' %}
+                    <p class="system-msg"><i>{{ msg[1] }} ({{ msg[2] }})</i></p>
+                {% else %}
+                    <div class="message-wrapper">
+                        <div class="msg-info">
+                            <span class="msg-name">{{ msg[0] }}</span>
+                            <span class="msg-time">{{ msg[2] }}</span>
+                        </div>
+                        <div class="msg-bubble">{{ msg[1]|safe }}</div>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        <div class="typing-indicator" id="typing-status"></div>
+
+        <div class="emoji-panel">
+            <button class="emoji-btn" onclick="addEmoji('😀')">😀</button>
+            <button class="emoji-btn" onclick="addEmoji('😂')">😂</button>
+            <button class="emoji-btn" onclick="addEmoji('😍')">😍</button>
+            <button class="emoji-btn" onclick="addEmoji('🔥')">🔥</button>
+            <button class="emoji-btn" onclick="addEmoji('👍')">👍</button>
+            <button class="emoji-btn" onclick="addEmoji('🎉')">🎉</button>
+            <button class="emoji-btn" onclick="addEmoji('😭')">😭</button>
+            <button class="emoji-btn" onclick="addEmoji('👀')">👀</button>
+        </div>
+
+        <div class="input-area">
+            <input id="msg" placeholder="Ketik pesan di sini..." autocomplete="off">
+            <button onclick="send()">Kirim</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+        // KODE JAVASCRIPT DIKONDISIKAN AGAR TIDAK MERUSAK LAYOUT JIKA OFFLINE
+        var socket;
+        var chatDiv = document.getElementById('chat');
+        var msgInput = document.getElementById('msg');
+        var nameInput = document.getElementById('name');
+        var typingStatus = document.getElementById('typing-status');
+        var onlineCount = document.getElementById('online-count');
+        var typingTimer;
+        var isAdmin = false;
+        var adminKey = "";
+
+        try {
+            socket = io();
+            
+            // Set nama acak aman
+            var savedName = "User_" + Math.floor(Math.random() * 900 + 100);
+            try {
+                if (sessionStorage.getItem('dochat_name')) {
+                    savedName = sessionStorage.getItem('dochat_name');
+                } else {
+                    sessionStorage.setItem('dochat_name', savedName);
+                }
+            } catch(e) { console.log("SessionStorage diblokir browser"); }
+            
+            nameInput.value = savedName;
+
+            // Hubungkan ke Socket
+            socket.on('connect', function() {
+                socket.emit('join', {name: nameInput.value});
+            });
+
+            // Fitur Online Update
+            socket.on('online_users_update', function(users) {
+                onlineCount.innerText = users.length;
+            });
+
+            // Fitur Mengetik
+            socket.on('user_typing', function(data) {
+                typingStatus.innerText = data.name + " sedang mengetik...";
+                clearTimeout(typingTimer);
+                typingTimer = setTimeout(function() {
+                    typingStatus.innerText = "";
+                }, 1500);
+            });
+
+            socket.on('force_rename', function(data) {
+                if (nameInput.value === data.old_name) {
+                    nameInput.value = data.new_name;
+                    try { sessionStorage.setItem('dochat_name', data.new_name); } catch(e){}
+                    socket.emit('join', {name: data.new_name});
+                }
+            });
+
+            socket.on('receive_message', function(data) {
+                if (data.name === 'SISTEM') {
+                    chatDiv.innerHTML += `<p class="system-msg"><i>${data.message} (${data.time})</i></p>`;
+                } else {
+                    chatDiv.innerHTML += `
+                        <div class="message-wrapper">
+                            <div class="msg-info">
+                                <span class="msg-name">${data.name}</span>
+                                <span class="msg-time">${data.time}</span>
+                            </div>
+                            <div class="msg-bubble">${data.message}</div>
+                        </div>
+                    `;
+                }
+                chatDiv.scrollTop = chatDiv.scrollHeight;
+            });
+
+        } catch(err) {
+            console.error("SocketIO gagal dimuat. Pastikan web dibuka lewat http://127.0.0.1:5000", err);
+        }
+
+        chatDiv.scrollTop = chatDiv.scrollHeight;
+
+        function addEmoji(emoji) {
+            msgInput.value += emoji;
+            msgInput.focus();
+        }
+
+        function formatMessage(text) {
+            var escapedText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            var urlRegex = /(https?:\/\/[^\s]+)/g;
+            return escapedText.replace(urlRegex, function(url) {
+                return '<a href="' + url + '" target="_blank">' + url + '</a>';
+            });
+        }
+
+        msgInput.addEventListener("input", function() {
+            if(socket) socket.emit('typing', {name: nameInput.value});
+        });
+
+        msgInput.addEventListener("keydown", function(event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                send();
+            }
+        });
+
+        function send() {
+            var name = nameInput.value.trim();
+            var msg = msgInput.value.trim();
+            if (msg === "") return;
+
+            if (msg.startsWith('/login ')) {
+                var password = msg.substring(7).trim();
+                if (password === "superadmin123") {
+                    isAdmin = true;
+                    adminKey = password;
+                    nameInput.removeAttribute('readonly');
+                    alert("Login Admin Sukses!");
+                }
+                msgInput.value = '';
+                return;
+            }
+
+            if (msg.startsWith('/gantinama ')) {
+                if (!isAdmin) return alert("Akses ditolak!");
+                var parts = msg.substring(11).trim().split(' ');
+                if (parts.length >= 2 && socket) {
+                    socket.emit('admin_rename', {key: adminKey, old_name: parts[0], new_name: parts.slice(1).join(' ')});
+                }
+                msgInput.value = '';
+                return;
+            }
+
+            var safeMsg = formatMessage(msg);
+            if(socket) {
+                socket.emit('send_message', {name: name, message: safeMsg});
+            } else {
+                alert("Gagal mengirim! Kamu membuka file HTML langsung, jalankan dulu 'python app.py' dan buka http://127.0.0.1:5000");
+            }
+            msgInput.value = '';
+        }
+    </script>
+    
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/static/sw.js').catch(function(e){
+                console.log("PWA Service worker gagal/diabaikan karena tidak lewat server local.");
+            });
+        }
+    </script>
+</body>
+</html>
